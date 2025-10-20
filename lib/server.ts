@@ -116,8 +116,8 @@ function finalizeCurrentCrashRound() {
   currentCrashRound = createCrashRound();
 }
 
-export async function getUserBalance(_: string): Promise<BalanceResponse> {
-  const balance = 999999.99;
+export async function getUserBalance(telegramId: string): Promise<BalanceResponse> {
+  const balance = telegramId ? 125.37 : 0;
   const usd = Number((balance * FALLBACK_USD_RATE).toFixed(2));
   return { balance, usd };
 }

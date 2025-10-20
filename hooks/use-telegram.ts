@@ -1,11 +1,11 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { getTelegramWebApp, type TelegramUser, type TelegramWebApp } from "@/lib/telegram";
+import type WebApp from "@twa-dev/sdk";
 
 type TelegramContextValue = {
-  webApp: TelegramWebApp;
-  user?: TelegramUser;
+  webApp: typeof WebApp;
+  user?: WebApp.WebAppUser;
   ready: boolean;
 };
 
@@ -19,13 +19,4 @@ export function useTelegram() {
     throw new Error("useTelegram must be used within TelegramProvider");
   }
   return context;
-}
-
-export function createInitialTelegramContext(): TelegramContextValue {
-  const webApp = getTelegramWebApp();
-  return {
-    webApp,
-    user: webApp.initDataUnsafe.user,
-    ready: true
-  };
 }

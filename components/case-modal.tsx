@@ -3,6 +3,7 @@
 import { Dialog } from "./dialog";
 import { Case } from "../types";
 import { motion } from "framer-motion";
+import confetti from "canvas-confetti";
 import { useEffect, useState } from "react";
 
 interface CaseModalProps {
@@ -51,7 +52,6 @@ export function CaseModal({ open, onOpenChange, caseData }: CaseModalProps) {
       const data: CaseOpenResponse = await response.json();
       setCaseResult(data);
       if (data.result?.value && data.result.value > caseData.price) {
-        const confetti = (await import("canvas-confetti")).default;
         confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
       }
     } catch (err) {
