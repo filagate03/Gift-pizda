@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyProvablyFair } from "../../../../../lib/server";
+import { verifyProvablyFair } from "@/lib/server";
 
 export async function POST(request: Request) {
   const { seed, hash, clientSeed } = await request.json();

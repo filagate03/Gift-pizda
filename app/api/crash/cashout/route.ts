@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { crashCashout } from "../../../../../lib/server";
+import { crashCashout } from "@/lib/server";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
