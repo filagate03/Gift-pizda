@@ -9,12 +9,27 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<WebApp.WebAppUser | undefined>();
 
   useEffect(() => {
-    if (!WebApp.initDataUnsafe.user) {
-      WebApp.expand();
+    try {
+      if (!WebApp.initDataUnsafe.user) {
+        WebApp.expand();
+      }
+      if (!WebApp.initDataUnsafe.user && process.env.NODE_ENV !== "production") {
+        setUser({
+          id: 0,
+          first_name: "Demo",
+          last_name: "User",
+          username: "demo_user",
+          language_code: "ru"
+        } as WebApp.WebAppUser);
+      } else {
+        setUser(WebApp.initDataUnsafe.user);
+      }
+      WebApp.ready();
+    } catch (error) {
+      console.error("Telegram WebApp SDK init error", error);
+    } finally {
+      setReady(true);
     }
-    setUser(WebApp.initDataUnsafe.user);
-    WebApp.ready();
-    setReady(true);
   }, []);
 
   return (

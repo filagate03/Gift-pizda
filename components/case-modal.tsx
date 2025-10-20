@@ -12,35 +12,51 @@ interface CaseModalProps {
   caseData: Case;
 }
 
-type CaseResult = {
-  item: string;
-  rarity: string;
-  value: number;
+type CaseOpenResponse = {
+  result: {
+    item: string;
+    rarity: string;
+    value: number;
+    probability: number;
+  };
+  serverSeed: string;
+  clientSeed: string;
+  signature: string;
+  roll: number;
 };
 
 export function CaseModal({ open, onOpenChange, caseData }: CaseModalProps) {
-  const [result, setResult] = useState<CaseResult | null>(null);
+  const [caseResult, setCaseResult] = useState<CaseOpenResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
-      setResult(null);
+      setCaseResult(null);
+      setError(null);
     }
   }, [open]);
 
   async function handleOpenCase() {
     try {
       setLoading(true);
+      setError(null);
       const response = await fetch("/api/cases/open", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ caseId: caseData.id })
       });
-      const data = await response.json();
-      setResult(data.result);
+      if (!response.ok) {
+        throw new Error("Failed to open case");
+      }
+      const data: CaseOpenResponse = await response.json();
+      setCaseResult(data);
       if (data.result?.value && data.result.value > caseData.price) {
         confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
       }
+    } catch (err) {
+      console.error(err);
+      setError("Не удалось открыть кейс. Попробуйте еще раз позже.");
     } finally {
       setLoading(false);
     }
@@ -54,10 +70,12 @@ export function CaseModal({ open, onOpenChange, caseData }: CaseModalProps) {
         <motion.div
           className="relative flex h-40 items-center justify-center rounded-2xl bg-white/5"
           initial={{ rotateY: 0 }}
-          animate={{ rotateY: result ? 180 : 0 }}
+          animate={{ rotateY: caseResult ? 180 : 0 }}
           transition={{ duration: 1.5, ease: "easeInOut" }}
         >
-          <span className="text-xl font-semibold">{result ? result.item : "Нажмите, чтобы открыть"}</span>
+          <span className="px-4 text-center text-xl font-semibold">
+            {caseResult ? caseResult.result.item : "Нажмите, чтобы открыть"}
+          </span>
         </motion.div>
         <button
           onClick={handleOpenCase}
@@ -66,11 +84,45 @@ export function CaseModal({ open, onOpenChange, caseData }: CaseModalProps) {
         >
           {loading ? "Открываем..." : `Открыть за ${caseData.price} TON`}
         </button>
-        {result && (
-          <div className="rounded-2xl bg-white/5 p-4">
-            <p className="font-semibold">Вы выиграли: {result.item}</p>
-            <p className="text-sm text-white/60">Редкость: {result.rarity}</p>
-            <p className="text-sm text-white/60">Стоимость: {result.value} TON</p>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        {caseResult && (
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-white/5 p-4">
+              <p className="font-semibold">Вы выиграли: {caseResult.result.item}</p>
+              <p className="text-sm text-white/60">Редкость: {caseResult.result.rarity}</p>
+              <p className="text-sm text-white/60">Стоимость: {caseResult.result.value} TON</p>
+              <p className="text-sm text-white/60">
+                Вероятность: {(caseResult.result.probability * 100).toFixed(2)}%
+              </p>
+            </div>
+            <div className="rounded-2xl bg-black/60 p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-white/80">
+                Проверьте честность
+              </h3>
+              <dl className="mt-2 grid gap-2 text-xs text-white/60">
+                <div>
+                  <dt className="font-medium text-white/70">Server seed</dt>
+                  <dd className="break-all font-mono">{caseResult.serverSeed}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-white/70">Client seed</dt>
+                  <dd className="font-mono">{caseResult.clientSeed}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-white/70">SHA256 hash</dt>
+                  <dd className="break-all font-mono">{caseResult.signature}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-white/70">Roll</dt>
+                  <dd className="font-mono">{caseResult.roll.toFixed(6)}</dd>
+                </div>
+              </dl>
+              <p className="mt-3 text-xs text-white/50">
+                Используйте серверный и клиентский seed, чтобы проверить подпись через эндпоинт
+                <code className="ml-1 rounded bg-white/10 px-1">/api/provably-fair/verify</code> или в
+                любом SHA256 калькуляторе.
+              </p>
+            </div>
           </div>
         )}
         <div>

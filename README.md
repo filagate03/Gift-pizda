@@ -16,10 +16,36 @@
 - `lib/` — утилиты и мок-данные
 - `styles/` — глобальные стили Tailwind
 
-## Запуск
-```bash
-npm install
-npm run dev
-```
+## Быстрый старт
+1. Скопируйте пример переменных окружения и при необходимости обновите значения:
+   ```bash
+   cp .env.example .env.local
+   ```
+2. Установите зависимости и запустите dev-сервер:
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-Перед запуском укажите `NEXT_PUBLIC_TONCONNECT_MANIFEST` в `.env.local` для корректного отображения TON Connect кнопки.
+> В `.env.local` укажите `NEXT_PUBLIC_APP_URL` (например, `https://gift-ton.vercel.app`). Манифест TON Connect по умолчанию доступен по адресу `/api/tonconnect-manifest`, поэтому дополнительная конфигурация не требуется. Если вы размещаете манифест отдельно, задайте `NEXT_PUBLIC_TONCONNECT_MANIFEST`.
+
+## Проверьте перед продакшеном
+- `npm run lint` — статический анализ кода
+- `npm run build` — production-сборка приложения
+
+## Деплой на Vercel
+1. Создайте новый проект и импортируйте репозиторий.
+2. В разделе **Environment Variables** добавьте значения из `.env.example` (минимум `NEXT_PUBLIC_APP_URL`).
+3. Запустите деплой. Vercel автоматически соберёт Next.js приложение и задеплоит API-роуты как serverless функции.
+
+## Деплой на Netlify
+1. Подключите репозиторий в Netlify и укажите команду сборки `npm run build`.
+2. В переменных окружения Netlify задайте:
+   - `NEXT_PUBLIC_APP_URL`
+   - `NEXT_PUBLIC_TONCONNECT_MANIFEST` (необязательно, если используете встроенный манифест)
+3. Убедитесь, что в проект добавлен `@netlify/plugin-nextjs` (см. `package.json`) и присутствует `netlify.toml` — Netlify настроит SSR автоматически.
+
+## Что дальше?
+- Подключите реальные источники данных вместо моков (`lib/server.ts`).
+- Реализуйте смарт-контракты на FunC и хранение результатов в PostgreSQL/Redis.
+- Заполните страницы `legal/` фактическими юридическими документами.

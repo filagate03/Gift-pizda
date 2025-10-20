@@ -16,28 +16,109 @@ type CaseOpenResponse = {
   serverSeed: string;
   clientSeed: string;
   signature: string;
+  roll: number;
 };
 
 type ProvablyFairVerification = {
   hash: string;
   seed: string;
+  clientSeed: string | null;
+  computedHash: string;
   verified: boolean;
 };
 
-let crashMultiplier = 1;
-let crashActive = true;
-let crashSeed = crypto.randomBytes(32).toString("hex");
-const crashHash = crypto.createHash("sha256").update(crashSeed).digest("hex");
-let crashHistory = Array.from({ length: 10 }).map((_, index) => ({
-  id: `round-${index}`,
-  multiplier: Number((Math.random() * 10 + 1).toFixed(2)),
-  seedHash: crypto.randomBytes(16).toString("hex"),
-  createdAt: new Date(Date.now() - index * 60000).toISOString()
-}));
+type CrashRoundState = {
+  id: string;
+  seed: string;
+  hash: string;
+  multiplier: number;
+  targetMultiplier: number;
+  lastUpdated: number;
+};
+
+type CrashHistoryEntry = {
+  id: string;
+  multiplier: number;
+  seed: string;
+  seedHash: string;
+  createdAt: string;
+};
+
+const CRASH_MAX_HISTORY = 50;
+const FALLBACK_USD_RATE = 2.1;
+
+function createCrashRound(): CrashRoundState {
+  const seed = crypto.randomBytes(32).toString("hex");
+  const hash = crypto.createHash("sha256").update(seed).digest("hex");
+  const targetMultiplier = Number((1.2 + Math.random() * 9).toFixed(2));
+
+  return {
+    id: crypto.randomUUID(),
+    seed,
+    hash,
+    multiplier: 1,
+    targetMultiplier,
+    lastUpdated: Date.now()
+  };
+}
+
+function bootstrapCrashHistory(): CrashHistoryEntry[] {
+  const now = Date.now();
+  return Array.from({ length: 10 }).map((_, index) => {
+    const seed = crypto.randomBytes(32).toString("hex");
+    const seedHash = crypto.createHash("sha256").update(seed).digest("hex");
+    return {
+      id: crypto.randomUUID(),
+      multiplier: Number((1.2 + Math.random() * 8.5).toFixed(2)),
+      seed,
+      seedHash,
+      createdAt: new Date(now - index * 60000).toISOString()
+    };
+  });
+}
+
+let currentCrashRound: CrashRoundState = createCrashRound();
+let previousCrashRound: CrashHistoryEntry | null = null;
+let crashHistory: CrashHistoryEntry[] = bootstrapCrashHistory();
+if (crashHistory.length > 0) {
+  previousCrashRound = crashHistory[0];
+}
+
+function advanceCrashRound() {
+  const now = Date.now();
+  const elapsedSeconds = Math.max(0, (now - currentCrashRound.lastUpdated) / 1000);
+  if (elapsedSeconds === 0) {
+    return;
+  }
+
+  const growth = elapsedSeconds * (0.35 + Math.random() * 0.45);
+  currentCrashRound.multiplier = Number(
+    Math.min(currentCrashRound.multiplier + growth, currentCrashRound.targetMultiplier).toFixed(2)
+  );
+  currentCrashRound.lastUpdated = now;
+
+  if (currentCrashRound.multiplier >= currentCrashRound.targetMultiplier) {
+    finalizeCurrentCrashRound();
+  }
+}
+
+function finalizeCurrentCrashRound() {
+  const finishedRound: CrashHistoryEntry = {
+    id: currentCrashRound.id,
+    multiplier: currentCrashRound.targetMultiplier,
+    seed: currentCrashRound.seed,
+    seedHash: currentCrashRound.hash,
+    createdAt: new Date().toISOString()
+  };
+
+  previousCrashRound = finishedRound;
+  crashHistory = [finishedRound, ...crashHistory].slice(0, CRASH_MAX_HISTORY);
+  currentCrashRound = createCrashRound();
+}
 
 export async function getUserBalance(telegramId: string): Promise<BalanceResponse> {
-  const balance = 125.37;
-  const usd = balance * 2.1;
+  const balance = telegramId ? 125.37 : 0;
+  const usd = Number((balance * FALLBACK_USD_RATE).toFixed(2));
   return { balance, usd };
 }
 
@@ -47,17 +128,17 @@ export async function openCase(caseId: string): Promise<CaseOpenResponse> {
     throw new Error("Case not found");
   }
 
-  const seed = crypto.randomBytes(32).toString("hex");
-  const timestamp = Date.now();
-  const combined = `${seed}:${timestamp}`;
-  const hash = crypto.createHash("sha256").update(combined).digest("hex");
-  const random = Number(`0.${hash.slice(0, 12)}`);
+  const serverSeed = crypto.randomBytes(32).toString("hex");
+  const clientSeed = String(Date.now());
+  const signature = crypto.createHash("sha256").update(`${serverSeed}:${clientSeed}`).digest("hex");
+  const roll = parseInt(signature.slice(0, 16), 16) / 0xffffffffffffffff;
 
   let cumulative = 0;
-  const selected = caseData.items.find((item) => {
-    cumulative += item.probability;
-    return random <= cumulative;
-  }) ?? caseData.items[caseData.items.length - 1];
+  const selected =
+    caseData.items.find((item) => {
+      cumulative += item.probability;
+      return roll <= cumulative;
+    }) ?? caseData.items[caseData.items.length - 1];
 
   return {
     result: {
@@ -66,57 +147,67 @@ export async function openCase(caseId: string): Promise<CaseOpenResponse> {
       value: selected.value,
       probability: selected.probability
     },
-    serverSeed: seed,
-    clientSeed: String(timestamp),
-    signature: hash
+    serverSeed,
+    clientSeed,
+    signature,
+    roll
   };
 }
 
 export async function getCrashStatus() {
-  crashMultiplier = crashActive ? crashMultiplier + 0.03 : 1;
-  if (crashMultiplier > 10) {
-    crashActive = false;
-  }
-  if (!crashActive) {
-    crashHistory = [
-      {
-        id: crypto.randomUUID(),
-        multiplier: Number(crashMultiplier.toFixed(2)),
-        seedHash: crashHash,
-        createdAt: new Date().toISOString()
-      },
-      ...crashHistory.slice(0, 49)
-    ];
-    crashSeed = crypto.randomBytes(32).toString("hex");
-    crashMultiplier = 1;
-    crashActive = true;
-  }
+  advanceCrashRound();
 
   return {
-    multiplier: crashMultiplier,
-    seedHash: crashHash,
-    serverSeed: crashActive ? undefined : crashSeed,
-    active: crashActive
+    id: currentCrashRound.id,
+    multiplier: currentCrashRound.multiplier,
+    seedHash: currentCrashRound.hash,
+    active: true,
+    serverSeed: previousCrashRound?.seed ?? null,
+    previousRound: previousCrashRound
+      ? {
+          id: previousCrashRound.id,
+          multiplier: previousCrashRound.multiplier,
+          seedHash: previousCrashRound.seedHash,
+          createdAt: previousCrashRound.createdAt
+        }
+      : null
   };
 }
 
-export async function joinCrashRound() {
-  return { success: true };
+export async function joinCrashRound(bet = 0) {
+  return {
+    success: true,
+    roundId: currentCrashRound.id,
+    bet
+  };
 }
 
-export async function crashCashout() {
-  return { success: true, multiplier: crashMultiplier };
+export async function crashCashout(bet = 0) {
+  const multiplier = previousCrashRound?.multiplier ?? currentCrashRound.multiplier;
+  return {
+    success: true,
+    roundId: previousCrashRound?.id ?? currentCrashRound.id,
+    multiplier,
+    winnings: Number((bet * multiplier).toFixed(2))
+  };
 }
 
 export async function getCrashHistory() {
   return crashHistory;
 }
 
-export async function verifyProvablyFair(seed: string, hash: string): Promise<ProvablyFairVerification> {
-  const computedHash = crypto.createHash("sha256").update(seed).digest("hex");
+export async function verifyProvablyFair(
+  seed: string,
+  hash: string,
+  clientSeed?: string
+): Promise<ProvablyFairVerification> {
+  const payload = clientSeed ? `${seed}:${clientSeed}` : seed;
+  const computedHash = crypto.createHash("sha256").update(payload).digest("hex");
   return {
     hash,
     seed,
+    clientSeed: clientSeed ?? null,
+    computedHash,
     verified: computedHash === hash
   };
 }
