@@ -1,35 +1,39 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import WebApp from "@twa-dev/sdk";
 import { TelegramContext } from "../hooks/use-telegram";
-import { getDemoUser, getTelegramWebApp, type TelegramUser } from "@/lib/telegram";
-
-const DEMO_USER = getDemoUser();
 
 export function TelegramProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [user, setUser] = useState<TelegramUser | undefined>();
-  const [webApp] = useState(() => getTelegramWebApp());
+  const [user, setUser] = useState<WebApp.WebAppUser | undefined>();
 
   useEffect(() => {
     try {
-      if (!webApp.initDataUnsafe.user) {
-        webApp.expand();
-        setUser(DEMO_USER);
-      } else {
-        setUser(webApp.initDataUnsafe.user);
+      if (!WebApp.initDataUnsafe.user) {
+        WebApp.expand();
       }
-      webApp.ready();
+      if (!WebApp.initDataUnsafe.user && process.env.NODE_ENV !== "production") {
+        setUser({
+          id: 0,
+          first_name: "Demo",
+          last_name: "User",
+          username: "demo_user",
+          language_code: "ru"
+        } as WebApp.WebAppUser);
+      } else {
+        setUser(WebApp.initDataUnsafe.user);
+      }
+      WebApp.ready();
     } catch (error) {
-      console.error("Telegram WebApp init error", error);
-      setUser(DEMO_USER);
+      console.error("Telegram WebApp SDK init error", error);
     } finally {
       setReady(true);
     }
-  }, [webApp]);
+  }, []);
 
   return (
-    <TelegramContext.Provider value={{ webApp, user, ready }}>
+    <TelegramContext.Provider value={{ webApp: WebApp, user, ready }}>
       {children}
     </TelegramContext.Provider>
   );

@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@twa-dev/sdk": "^6.9.2",
+    "@tonconnect/ui-react": "^2.1.1",
     "classnames": "^2.5.1",
     "canvas-confetti": "^1.9.3",
     "framer-motion": "^10.18.0",

@@ -4,7 +4,6 @@ import { featuredCases } from "./data";
 type BalanceResponse = {
   balance: number;
   usd: number;
-  infinite: boolean;
 };
 
 type CaseOpenResponse = {
@@ -117,10 +116,10 @@ function finalizeCurrentCrashRound() {
   currentCrashRound = createCrashRound();
 }
 
-export async function getUserBalance(_: string): Promise<BalanceResponse> {
-  const balance = 999_999_999.99;
+export async function getUserBalance(telegramId: string): Promise<BalanceResponse> {
+  const balance = telegramId ? 125.37 : 0;
   const usd = Number((balance * FALLBACK_USD_RATE).toFixed(2));
-  return { balance, usd, infinite: true };
+  return { balance, usd };
 }
 
 export async function openCase(caseId: string): Promise<CaseOpenResponse> {

@@ -5,8 +5,8 @@
 ## Технологии
 - Next.js 14 + React 18
 - Tailwind CSS и Framer Motion для UI/анимаций
-- Лёгкий мок Telegram Web App (без реального SDK)
-- SWR и Recharts для клиентской логики и визуализаций
+- Telegram Web App SDK (@twa-dev/sdk)
+- TON Connect UI React
 - Serverless API маршруты (app/api)
 
 ## Структура
@@ -17,11 +17,17 @@
 - `styles/` — глобальные стили Tailwind
 
 ## Быстрый старт
-1. Установите зависимости и запустите dev-сервер:
+1. Скопируйте пример переменных окружения и при необходимости обновите значения:
+   ```bash
+   cp .env.example .env.local
+   ```
+2. Установите зависимости и запустите dev-сервер:
    ```bash
    npm install
    npm run dev
    ```
+
+> В `.env.local` укажите `NEXT_PUBLIC_APP_URL` (например, `https://gift-ton.vercel.app`). Манифест TON Connect по умолчанию доступен по адресу `/api/tonconnect-manifest`, поэтому дополнительная конфигурация не требуется. Если вы размещаете манифест отдельно, задайте `NEXT_PUBLIC_TONCONNECT_MANIFEST`.
 
 ## Проверьте перед продакшеном
 - `npm run lint` — статический анализ кода
@@ -29,11 +35,14 @@
 
 ## Деплой на Vercel
 1. Создайте новый проект и импортируйте репозиторий.
-2. Запустите деплой — демо не требует переменных окружения. Vercel автоматически соберёт Next.js приложение и задеплоит API-роуты как serverless функции.
+2. В разделе **Environment Variables** добавьте значения из `.env.example` (минимум `NEXT_PUBLIC_APP_URL`).
+3. Запустите деплой. Vercel автоматически соберёт Next.js приложение и задеплоит API-роуты как serverless функции.
 
 ## Деплой на Netlify
 1. Подключите репозиторий в Netlify и укажите команду сборки `npm run build`.
-2. Переменные окружения не требуются для демо.
+2. В переменных окружения Netlify задайте:
+   - `NEXT_PUBLIC_APP_URL`
+   - `NEXT_PUBLIC_TONCONNECT_MANIFEST` (необязательно, если используете встроенный манифест)
 3. Убедитесь, что в проект добавлен `@netlify/plugin-nextjs` (см. `package.json`) и присутствует `netlify.toml` — Netlify настроит SSR автоматически.
 
 ## Что дальше?
