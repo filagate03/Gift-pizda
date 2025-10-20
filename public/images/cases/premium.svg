@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#301A68" />
+      <stop offset="100%" stop-color="#FF5CA8" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#grad2)" rx="30" />
+  <text x="50%" y="55%" text-anchor="middle" fill="#fff" font-size="36" font-family="Arial" font-weight="bold">PR</text>
+</svg>
